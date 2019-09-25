@@ -9,6 +9,7 @@ Contents:
 * `env-reference.sh` - reference script for setting up the environment to locate apps
 * `topology.sh` - utility script for parsing system topology
 * `run-app-numactl.sh` - run an application using `numactl` and capture output
+* `run-multiapp-numactl.sh` - run multiple instances of an application using `numactl` and capture outputs
 
 
 Prerequisites
