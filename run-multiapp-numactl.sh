@@ -3,6 +3,45 @@
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 export PATH=$THIS_DIR:$PATH # to run other scripts
 
+# Round-robin assignment of app instances to sockets (>=1 instance per socket).
+# Allows for sockets and CPUs to remain unassigned, but not shared.
+function schedule_cpus_sockets_share() {
+    for ((i = 0; i < N_APP_INSTANCES; i++)); do
+        local sock=$((i % N_SOCKETS))
+        local off=$((N_APP_THREADS_PER_INST * (i / N_SOCKETS)))
+        if ((off + N_APP_THREADS_PER_INST > N_CPUS_PER_SOCK)); then
+            echo "Insufficient CPU count!"
+            return 1
+        fi
+        topology_sock_to_physcpubind $sock "$N_APP_THREADS_PER_INST" $off
+    done
+}
+
+# Assign sockets to app instances (>=1 socket per instance).
+# Allows for sockets to remain unassigned, but not shared.
+# App instances may be oversubscribed CPUs (sockets provide N_CPUS_PER_SOCK).
+function schedule_cpus_sockets_own() {
+    local nsock_per_inst=$((N_APP_THREADS_PER_INST / N_CPUS_PER_SOCK))
+    if ((N_APP_THREADS_PER_INST % N_CPUS_PER_SOCK)); then
+        ((nsock_per_inst++)) # app was not a precise fit to socket CPUs
+    fi
+    local sock=0
+    for ((i = 0; i < N_APP_INSTANCES; i++)); do
+        local cpus=""
+        for ((s = 0; s < nsock_per_inst; s++, sock++)); do
+            if ((sock >= N_SOCKETS)); then
+                echo "Insufficient socket count!"
+                return 1
+            fi
+            if [ -n "$cpus" ]; then
+                cpus+=","
+            fi
+            cpus+=$(topology_sock_to_physcpubind $sock "$N_CPUS_PER_SOCK")
+        done
+        echo "$cpus"
+    done
+}
+
 function kill_all_and_die() {
     kill 0
     exit 1
@@ -18,60 +57,13 @@ function wait_all() {
 
 function launch_app() {
     local cpus=$1
-    local logdir="cpus_${cpus}"
-    mkdir "$logdir" || kill_all_and_die
+    local logdir=$2
+    mkdir "$logdir" || return $?
     (
         cd "$logdir" &&
         run-app-numactl.sh -a "$APP_SCRIPT_PATH" -C "$cpus" \
                            -t "$N_APP_THREADS_PER_INST" -l run-app.log
-    )
-}
-
-# Round-robin assignment of app instances to sockets (>=1 instance per socket).
-# Allows for sockets and CPUs to remain unassigned, but not shared.
-function multiapp_numactl_sockets_share() {
-    local pids=()
-    for ((i = 0; i < N_APP_INSTANCES; i++)); do
-        local sock=$((i % N_SOCKETS))
-        local off=$((N_APP_THREADS_PER_INST * (i / N_SOCKETS)))
-        if ((off + N_APP_THREADS_PER_INST > N_CPUS_PER_SOCK)); then
-            echo "multiapp_numactl_sockets_share: insufficient CPU count!"
-            kill_all_and_die
-        fi
-        local cpus
-        cpus=$(topology_sock_to_physcpubind $sock "$N_APP_THREADS_PER_INST" $off)
-        launch_app "$cpus" &
-        pids+=($!)
-    done
-    wait_all "${pids[@]}"
-}
-
-# Assign sockets to app instances (>=1 socket per instance).
-# Allows for sockets to remain unassigned, but not shared.
-# App instances may be oversubscribed CPUs (sockets provide N_CPUS_PER_SOCK).
-function multiapp_numactl_sockets_own() {
-    local nsock_per_inst=$((N_APP_THREADS_PER_INST / N_CPUS_PER_SOCK))
-    if ((N_APP_THREADS_PER_INST % N_CPUS_PER_SOCK)); then
-        ((nsock_per_inst++)) # app was not a precise fit to socket CPUs
-    fi
-    local sock=0
-    local pids=()
-    for ((i = 0; i < N_APP_INSTANCES; i++)); do
-        local cpus=""
-        for ((s = 0; s < nsock_per_inst; s++, sock++)); do
-            if ((sock >= N_SOCKETS)); then
-                echo "multiapp_numactl_sockets_own: insufficient socket count!"
-                kill_all_and_die
-            fi
-            if [ -n "$cpus" ]; then
-                cpus+=","
-            fi
-            cpus+=$(topology_sock_to_physcpubind $sock "$N_CPUS_PER_SOCK")
-        done
-        launch_app "$cpus" &
-        pids+=($!)
-    done
-    wait_all "${pids[@]}"
+    ) &
 }
 
 function usage() {
@@ -149,6 +141,7 @@ if ((TOTAL_APP_THREADS > TOTAL_CPU_THREADS)); then
     exit 1
 fi
 
+CPU_SCHEDULES=()
 if ((N_CPUS_PER_SOCK >= N_APP_THREADS_PER_INST)); then
     # assign instances to sockets (>=1 instance per socket)
     # enforce modular fit --> never run out of CPUs
@@ -160,7 +153,7 @@ if ((N_CPUS_PER_SOCK >= N_APP_THREADS_PER_INST)); then
         exit 1
     fi
     # there may still be unused sockets, but that's OK
-    multiapp_numactl_sockets_share
+    CPU_SCHEDULES=($(schedule_cpus_sockets_share)) || exit $?
 else
     # assign sockets to instances (>=1 socket per instance)
     # enforce modular fit --> never run out of sockets or oversubscribe CPUs
@@ -172,5 +165,12 @@ else
         exit 1
     fi
     # there may still be unused sockets, but that's OK
-    multiapp_numactl_sockets_own
+    CPU_SCHEDULES=($(schedule_cpus_sockets_own)) || exit $?
 fi
+
+PIDS=()
+for cpus in "${CPU_SCHEDULES[@]}"; do
+    launch_app "$cpus" "cpus_${cpus}" || kill_all_and_die
+    PIDS+=($!)
+done
+wait_all "${PIDS[@]}"
