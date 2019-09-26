@@ -20,29 +20,37 @@ function run_multiapp() {
     )
 }
 
-function characterize_sockets_multiapp() {
+function get_default_socket_counts() {
+    local sockets=()
     for ((s = 1; s <= TOPOLOGY_SOCKETS; s++)); do
-        mod=$((TOPOLOGY_SOCKETS % s))
-        if [ $mod -ne 0 ]; then
-            continue # not likely to be a balanced configuration
+        local mod=$((TOPOLOGY_SOCKETS % s))
+        if [ $mod -eq 0 ]; then
+            sockets+=($s) # a balanced configuration
         fi
+    done
+    echo "${sockets[@]}"
+}
+
+function characterize_sockets_multiapp() {
+    for s in "$@"; do
         local logdir="sockets_${s}"
         if [ -e "$logdir" ]; then
             echo "WARNING: directory exists: $logdir"
             echo "  skipping..."
             continue
         fi
-        run_multiapp $s "$logdir" || return $?
+        run_multiapp "$s" "$logdir" || return $?
     done
 }
 
 function usage() {
     local rc=${1:-0}
-    echo "Characterize running app instances on varying numbers of sockets"
+    echo "Characterize running app instances on different socket counts"
     echo "Uses physical cores only"
     echo ""
-    echo "Usage: $0 -a SH [-p] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-p] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
+    echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -p: use only physical cores"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
@@ -51,10 +59,14 @@ function usage() {
 
 IS_WARMUP=0
 IS_PHYS_ONLY=0
-while getopts "a:pwh?" o; do
+SOCKET_COUNTS=()
+while getopts "a:s:pwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
+            ;;
+        s)
+            SOCKET_COUNTS+=($OPTARG)
             ;;
         p)
             IS_PHYS_ONLY=1
@@ -79,8 +91,19 @@ APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
 
 source topology.sh
 
+if [ ${#SOCKET_COUNTS[@]} -eq 0 ]; then
+    SOCKET_COUNTS=($(get_default_socket_counts))
+else
+    for s in "${SOCKET_COUNTS[@]}"; do
+        if [ "$s" -lt 1 ] || [ "$s" -gt "$TOPOLOGY_SOCKETS" ]; then
+            echo "Socket count ($s) out of range: [1, $TOPOLOGY_SOCKETS]"
+            exit 1
+        fi
+    done
+fi
+
 if [ $IS_WARMUP -gt 0 ]; then
     run_multiapp "$TOPOLOGY_SOCKETS" warmup || exit $?
 fi
 
-characterize_sockets_multiapp
+characterize_sockets_multiapp "${SOCKET_COUNTS[@]}"
