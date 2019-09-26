@@ -7,12 +7,14 @@ function run_multiapp() {
     local socks=$1
     local logdir=$2
     local cpus=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
+    local insts=$((IS_UNIFIED ? 1 : socks))
+    local threads=$((IS_UNIFIED ? cpus * socks : cpus))
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
         run-multiapp-numactl.sh -a "$APP_SCRIPT_PATH" \
-                                -i "$socks" -t $cpus \
+                                -i "$insts" -t $threads \
                                 -s "$socks" -c $cpus
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
@@ -47,19 +49,21 @@ function usage() {
     local rc=${1:-0}
     echo "Characterize running app instances on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-p] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-p] [-u] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -p: use only physical cores"
+    echo "    -u: unified execution - run same app instance on all sockets"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
     exit "$rc"
 }
 
+IS_UNIFIED=0
 IS_WARMUP=0
 IS_PHYS_ONLY=0
 SOCKET_COUNTS=()
-while getopts "a:s:pwh?" o; do
+while getopts "a:s:puwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
@@ -69,6 +73,9 @@ while getopts "a:s:pwh?" o; do
             ;;
         p)
             IS_PHYS_ONLY=1
+            ;;
+        u)
+            IS_UNIFIED=1
             ;;
         w)
             IS_WARMUP=1
