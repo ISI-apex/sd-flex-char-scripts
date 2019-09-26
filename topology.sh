@@ -56,7 +56,7 @@ function topology_sock_to_taskset() {
     [ -z "$off" ] && off=0
     local ts
     ts=$(topology_cpus_to_bitmask "$cpus")
-    ts=$((ts << (sock * TOPOLOGY_SOCKET_CPUS)))
+    ts=$((ts << (sock * TOPOLOGY_SOCKET_CORES)))
     ts=$((ts << off))
     printf "%x\n" "$ts"
 }
@@ -70,7 +70,7 @@ function topology_sock_to_physcpubind() {
     local cpus=$2
     local off=$3
     [ -z "$off" ] && off=0
-    local start=$(((sock * TOPOLOGY_SOCKET_CPUS) + off))
+    local start=$(((sock * TOPOLOGY_SOCKET_CORES) + off))
     local end=$((start + cpus - 1))
     echo "${start}-${end}"
 }
