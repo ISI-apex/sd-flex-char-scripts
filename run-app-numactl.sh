@@ -63,7 +63,7 @@ echo "$APP_NAME: app_pre"
 app_pre "$NTHREADS" || exit $?
 echo "$APP_NAME: start: $(datetime)" | tee "$LOG"
 echo "$APP_NAME: run: numactl -l -C $CPUS -- ${APP_CMD[*]}"
-numactl -l -C "$CPUS" "${APP_CMD[@]}" > >(tee stdout.log) 2> >(tee stderr.log)
+numactl -l -C "$CPUS" -- "${APP_CMD[@]}" > >(tee stdout.log) 2> >(tee stderr.log)
 rc=$?
 echo "$APP_NAME: end: $(datetime)" | tee -a "$LOG"
 echo "$APP_NAME: app_post"
