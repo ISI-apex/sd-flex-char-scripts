@@ -46,7 +46,6 @@ function characterize_sockets_multiapp() {
 function usage() {
     local rc=${1:-0}
     echo "Characterize running app instances on different socket counts"
-    echo "Uses physical cores only"
     echo ""
     echo "Usage: $0 -a SH [-s N]+ [-p] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
