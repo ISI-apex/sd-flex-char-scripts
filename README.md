@@ -10,6 +10,9 @@ Contents:
 * `topology.sh` - utility script for parsing system topology
 * `run-app-numactl.sh` - run an application using `numactl` and capture output
 * `run-multiapp-numactl.sh` - run multiple instances of an application using `numactl` and capture outputs
+* `characterize-sockets-multiapp-numactl.sh` - run multiapp `numactl` applications for different socket counts
+* `run-app-openmpi.sh` - run an application using OpenMPI and capture output
+* `characterize-sockets-app-openmpi.sh` - run MPI applications by mapping to different socket counts
 
 
 Prerequisites
@@ -17,6 +20,7 @@ Prerequisites
 
 * numactl
 * util-linux
+* OpenMPI 4.x - https://www.open-mpi.org/
 
 
 Applications
