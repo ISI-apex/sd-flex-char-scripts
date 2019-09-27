@@ -59,11 +59,13 @@ if [ -z "$APP_NAME" ]; then
     APP_NAME="<UNKNOWN>"
 fi
 
+RUN_CMD=(numactl -l -C "$CPUS" -- "${APP_CMD[@]}")
+
 echo "$APP_NAME: app_pre"
 app_pre "$NTHREADS" || exit $?
 echo "$APP_NAME: start: $(datetime)" | tee "$LOG"
-echo "$APP_NAME: run: numactl -l -C $CPUS -- ${APP_CMD[*]}" | tee -a "$LOG"
-numactl -l -C "$CPUS" -- "${APP_CMD[@]}" > >(tee stdout.log) 2> >(tee stderr.log)
+echo "$APP_NAME: run: ${RUN_CMD[*]}" | tee -a "$LOG"
+"${RUN_CMD[@]}" > >(tee stdout.log) 2> >(tee stderr.log)
 rc=$?
 echo "$APP_NAME: end: $(datetime)" | tee -a "$LOG"
 echo "$APP_NAME: app_post"
