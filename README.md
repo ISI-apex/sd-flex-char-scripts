@@ -27,3 +27,4 @@ Applications
 ------------
 
 * [NAS Parallel Benchmarks](https://www.nas.nasa.gov/publications/npb.html) version 3.4
+* [STREAM](http://www.cs.virginia.edu/stream/) version 5.10
