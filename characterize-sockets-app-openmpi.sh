@@ -45,7 +45,6 @@ function characterize_sockets() {
 }
 
 function usage() {
-    local rc=${1:-0}
     echo "Characterize running a MPI app on different socket counts"
     echo ""
     echo "Usage: $0 -a SH [-s N]+ [-p] [-w] [-h]"
@@ -54,7 +53,6 @@ function usage() {
     echo "    -p: use only physical cores"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
-    exit "$rc"
 }
 
 IS_WARMUP=0
@@ -76,16 +74,18 @@ while getopts "a:s:pwh?" o; do
             ;;
         h)
             usage
+            exit
             ;;
         *)
-            echo "Unknown option"
-            usage 1
+            >&2 usage
+            exit 1
             ;;
     esac
 done
 shift $((OPTIND-1))
 if [ -z "$APP_SCRIPT" ] || [ ! -f "$APP_SCRIPT" ]; then
-    usage 1
+    >&2 usage
+    exit 1
 fi
 APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
 
@@ -96,7 +96,7 @@ if [ ${#SOCKET_COUNTS[@]} -eq 0 ]; then
 else
     for s in "${SOCKET_COUNTS[@]}"; do
         if [ "$s" -lt 1 ] || [ "$s" -gt "$TOPOLOGY_SOCKETS" ]; then
-            echo "Socket count ($s) out of range: [1, $TOPOLOGY_SOCKETS]"
+            >&2 echo "Socket count ($s) out of range: [1, $TOPOLOGY_SOCKETS]"
             exit 1
         fi
     done

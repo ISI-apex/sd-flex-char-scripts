@@ -10,7 +10,7 @@ function schedule_cpus_sockets_share() {
         local sock=$((i % N_SOCKETS))
         local off=$((N_APP_THREADS_PER_INST * (i / N_SOCKETS)))
         if ((off + N_APP_THREADS_PER_INST > N_CPUS_PER_SOCK)); then
-            echo "Insufficient CPU count!"
+            >&2 echo "Insufficient CPU count!"
             return 1
         fi
         topology_sock_to_physcpubind $sock "$N_APP_THREADS_PER_INST" $off
@@ -30,7 +30,7 @@ function schedule_cpus_sockets_own() {
         local cpus=""
         for ((s = 0; s < nsock_per_inst; s++, sock++)); do
             if ((sock >= N_SOCKETS)); then
-                echo "Insufficient socket count!"
+                >&2 echo "Insufficient socket count!"
                 return 1
             fi
             if [ -n "$cpus" ]; then
@@ -67,7 +67,6 @@ function launch_app() {
 }
 
 function usage() {
-    local rc=${1:-0}
     echo "Run >=1 app instance on >=1 sockets using numactl"
     echo "Creates and writes to directories in the form 'cpus_M-N[,O-P]*'"
     echo ""
@@ -78,7 +77,6 @@ function usage() {
     echo "    -s N: number of sockets (default=1)"
     echo "    -c N: number of CPUs per socket (default=1)"
     echo "    -h: print help/usage and exit"
-    exit "$rc"
 }
 
 N_APP_INSTANCES=1
@@ -104,16 +102,18 @@ while getopts "a:i:t:s:c:h?" o; do
             ;;
         h)
             usage
+            exit
             ;;
         *)
-            echo "Unknown option"
-            usage 1
+            >&2 usage
+            exit 1
             ;;
     esac
 done
 shift $((OPTIND-1))
 if [ -z "$APP_SCRIPT" ] || [ ! -f "$APP_SCRIPT" ]; then
-    usage 1
+    >&2 usage
+    exit 1
 fi
 APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
 
@@ -122,8 +122,8 @@ topology_dbg
 
 # enforce that topology is respected
 if ((N_CPUS_PER_SOCK > TOPOLOGY_SOCKET_CPUS)); then
-    echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) >" \
-         "TOPOLOGY_SOCKET_CPUS ($TOPOLOGY_SOCKET_CPUS)"
+    >&2 echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) >" \
+             "TOPOLOGY_SOCKET_CPUS ($TOPOLOGY_SOCKET_CPUS)"
     exit 1
 fi
 if ((N_CPUS_PER_SOCK > TOPOLOGY_SOCKET_CORES)); then
@@ -136,8 +136,8 @@ fi
 TOTAL_APP_THREADS=$((N_APP_INSTANCES * N_APP_THREADS_PER_INST))
 TOTAL_CPU_THREADS=$((N_SOCKETS * N_CPUS_PER_SOCK))
 if ((TOTAL_APP_THREADS > TOTAL_CPU_THREADS)); then
-    echo "ERROR: Total app threads ($TOTAL_APP_THREADS)" \
-         "must be <= Total CPUs ($TOTAL_CPU_THREADS)"
+    >&2 echo "ERROR: Total app threads ($TOTAL_APP_THREADS)" \
+             "must be <= Total CPUs ($TOTAL_CPU_THREADS)"
     exit 1
 fi
 
@@ -146,10 +146,10 @@ if ((N_CPUS_PER_SOCK >= N_APP_THREADS_PER_INST)); then
     # assign instances to sockets (>=1 instance per socket)
     # enforce modular fit --> never run out of CPUs
     if ((N_CPUS_PER_SOCK % N_APP_THREADS_PER_INST)); then
-        echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) >=" \
-             "Threads per app instance ($N_APP_THREADS_PER_INST) -->" \
-             "Threads per app instance ($N_APP_THREADS_PER_INST) must be a divisor of" \
-             "CPUs per socket ($N_CPUS_PER_SOCK)"
+        >&2 echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) >=" \
+                 "Threads per app instance ($N_APP_THREADS_PER_INST) -->" \
+                 "Threads per app instance ($N_APP_THREADS_PER_INST) must be a divisor of" \
+                 "CPUs per socket ($N_CPUS_PER_SOCK)"
         exit 1
     fi
     # there may still be unused sockets, but that's OK
@@ -158,10 +158,10 @@ else
     # assign sockets to instances (>=1 socket per instance)
     # enforce modular fit --> never run out of sockets or oversubscribe CPUs
     if ((N_APP_THREADS_PER_INST % N_CPUS_PER_SOCK)); then
-        echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) <" \
-             "Threads per app instance ($N_APP_THREADS_PER_INST) -->" \
-             "CPUs per socket ($N_CPUS_PER_SOCK) must be a divisor of" \
-             "Threads per app instance ($N_APP_THREADS_PER_INST)"
+        >&2 echo "ERROR: CPUs per socket ($N_CPUS_PER_SOCK) <" \
+                 "Threads per app instance ($N_APP_THREADS_PER_INST) -->" \
+                 "CPUs per socket ($N_CPUS_PER_SOCK) must be a divisor of" \
+                 "Threads per app instance ($N_APP_THREADS_PER_INST)"
         exit 1
     fi
     # there may still be unused sockets, but that's OK

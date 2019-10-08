@@ -5,7 +5,6 @@ function datetime() {
 }
 
 function usage() {
-    local rc=${1:-0}
     echo "Run an app using numactl"
     echo "Writes to stdout.log and stderr.log"
     echo ""
@@ -15,7 +14,6 @@ function usage() {
     echo "    -C CPUS: numactl physcpubind"
     echo "    -l FILE: log file for start/end timing metrics"
     echo "    -h: print help/usage and exit"
-    exit "$rc"
 }
 
 while getopts "a:t:C:l:h?" o; do
@@ -34,17 +32,19 @@ while getopts "a:t:C:l:h?" o; do
             ;;
         h)
             usage
+            exit
             ;;
         *)
-            echo "Unknown option"
-            usage 1
+            >&2 usage
+            exit 1
             ;;
     esac
 done
 shift $((OPTIND-1))
 if [ -z "$APP_SCRIPT" ] || [ ! -f "$APP_SCRIPT" ] ||
    [ -z "$CPUS" ] || [ -z "$NTHREADS" ]; then
-    usage 1
+    >&2 usage
+    exit 1
 fi
 if [ -z "$LOG" ]; then
     LOG=/dev/null
@@ -52,7 +52,7 @@ fi
 
 source "$APP_SCRIPT" || exit 1
 if [ ${#APP_CMD[@]} -eq 0 ]; then
-    echo "APP not set --> bad app config script?"
+    >&2 echo "APP not set --> bad app config script?"
     exit 1
 fi
 if [ -z "$APP_NAME" ]; then
