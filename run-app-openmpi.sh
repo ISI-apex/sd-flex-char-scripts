@@ -85,7 +85,7 @@ else
               --map-by "${MAP_BY}":PE="$NTHREADS"
               --bind-to "${BIND_TO}")
 fi
-RUN_CMD+=(--output-filename . "$@" -- "${APP_CMD[@]}")
+RUN_CMD+=(--report-bindings --output-filename . "$@" -- "${APP_CMD[@]}")
 
 echo "$APP_NAME: app_pre"
 app_pre "$NPROCS" "$NTHREADS" || exit $?
