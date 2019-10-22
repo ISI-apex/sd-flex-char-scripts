@@ -19,3 +19,7 @@ export PATH=${NPB_OMP_DIR}/bin:${NPB_MPI_DIR}/bin:$PATH
 # Configure STREAM location
 STREAM_DIR=${HOME}/stream
 export PATH=${STREAM_DIR}:$PATH
+
+# Configure HPGMG location
+HPGMG_DIR=${HOME}/hpgmg
+export PATH=${HPGMG_DIR}/build/bin:$PATH
