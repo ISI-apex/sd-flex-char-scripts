@@ -16,6 +16,12 @@ NPB_OMP_DIR=${NPB_DIR}/NPB${NPB_VER}-OMP
 NPB_MPI_DIR=${NPB_DIR}/NPB${NPB_VER}-MPI
 export PATH=${NPB_OMP_DIR}/bin:${NPB_MPI_DIR}/bin:$PATH
 
+# Configure NAS Parallel Benchmarks Multi-Zone binary location
+NPB_MZ_VER=3.4
+NPB_MZ_DIR=${HOME}/NPB${NPB_MZ_VER}-MZ
+NPB_MZ_MPI_DIR=${NPB_MZ_DIR}/NPB${NPB_MZ_VER}-MZ-MPI
+export PATH=${NPB_MZ_MPI_DIR}/bin:$PATH
+
 # Configure STREAM location
 STREAM_DIR=${HOME}/stream
 export PATH=${STREAM_DIR}:$PATH
