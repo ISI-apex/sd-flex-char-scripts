@@ -12,9 +12,7 @@ function run_app() {
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
-        run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log \
-                           -n "$np" -t 1 \
-                           -m socket -b core
+        run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np"
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
         return $rc
