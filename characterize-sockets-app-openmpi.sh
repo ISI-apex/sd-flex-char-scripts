@@ -7,12 +7,17 @@ function run_app() {
     local socks=$1
     local logdir=$2
     local cpus_per_sock=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
-    local np=$((cpus_per_sock * socks))
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
-        run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np"
+        if [ "$IS_USE_THREADS" -eq 1 ]; then
+            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -m socket \
+                               -n "$socks" -t "$cpus_per_sock"
+        else
+            local np=$((cpus_per_sock * socks))
+            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np"
+        fi
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
         return $rc
@@ -45,24 +50,29 @@ function characterize_sockets() {
 function usage() {
     echo "Characterize running a MPI app on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-p] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-t] [-p] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
+    echo "    -t: use threads within ranks (implies map-by 'socket' instead of 'core')"
     echo "    -p: use only physical cores"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
 }
 
 IS_WARMUP=0
+IS_USE_THREADS=0
 IS_PHYS_ONLY=0
 SOCKET_COUNTS=()
-while getopts "a:s:pwh?" o; do
+while getopts "a:s:tpwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
             ;;
         s)
             SOCKET_COUNTS+=($OPTARG)
+            ;;
+        t)
+            IS_USE_THREADS=1
             ;;
         p)
             IS_PHYS_ONLY=1
