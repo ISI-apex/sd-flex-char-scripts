@@ -26,6 +26,9 @@ export PATH=${NPB_MZ_MPI_DIR}/bin:$PATH
 STREAM_DIR=${HOME}/stream
 export PATH=${STREAM_DIR}:$PATH
 
+AMG_DIR=${HOME}/AMG
+export PATH=${AMG_DIR}/test:$PATH
+
 # Configure HPGMG location
 HPGMG_DIR=${HOME}/hpgmg
 export PATH=${HPGMG_DIR}/build/bin:$PATH
