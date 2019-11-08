@@ -69,10 +69,6 @@ if [ -z "$LOG" ]; then
 fi
 
 source "$APP_SCRIPT" || exit 1
-if [ ${#APP_CMD[@]} -eq 0 ]; then
-    >&2 echo "APP not set --> bad app config script?"
-    exit 1
-fi
 if [ -z "$APP_NAME" ]; then
     APP_NAME="<UNKNOWN>"
 fi
@@ -85,10 +81,11 @@ else
               --map-by "${MAP_BY}":PE="$NTHREADS"
               --bind-to "${BIND_TO}")
 fi
-RUN_CMD+=(--report-bindings --output-filename . "$@" -- "${APP_CMD[@]}")
+RUN_CMD+=(--report-bindings --output-filename . "$@" --)
 
 echo "$APP_NAME: app_pre"
 app_pre "$NPROCS" "$NTHREADS" || exit $?
+RUN_CMD+=("${APP_CMD[@]}")
 echo "$APP_NAME: start: $(datetime)" | tee "$LOG"
 echo "$APP_NAME: run: ${RUN_CMD[*]}" | tee -a "$LOG"
 "${RUN_CMD[@]}"
