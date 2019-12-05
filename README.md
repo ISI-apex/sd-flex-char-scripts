@@ -12,6 +12,7 @@ Contents:
 * `run-multiapp-numactl.sh` - run multiple instances of an application using `numactl` and capture outputs
 * `characterize-sockets-multiapp-numactl.sh` - run multiapp `numactl` applications for different socket counts
 * `run-app-openmpi.sh` - run an application using OpenMPI and capture output
+* `run-app-openmpi-omp.sh` - thin wrapper around `run-app-openmpi.sh` to map ranks by socket (OpenMP can be used within a socket)
 * `characterize-sockets-app-openmpi.sh` - run MPI applications by mapping to different socket counts
 
 
@@ -28,3 +29,7 @@ Applications
 
 * [NAS Parallel Benchmarks](https://www.nas.nasa.gov/publications/npb.html) version 3.4
 * [STREAM](http://www.cs.virginia.edu/stream/) version 5.10
+* [AMG](https://github.com/LLNL/AMG) version 1.2
+* [HPGMG](https://bitbucket.org/hpgmg/hpgmg) version 0.4
+* [RSBench](https://github.com/ANL-CESAR/RSBench) version 12
+* [XSBench](https://github.com/ANL-CESAR/XSBench) version 19
