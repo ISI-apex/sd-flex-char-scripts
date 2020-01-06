@@ -33,6 +33,9 @@ export PATH=${AMG_DIR}/test:$PATH
 HPGMG_DIR=${HOME}/hpgmg
 export PATH=${HPGMG_DIR}/build/bin:$PATH
 
+MACSIO_DIR=${HOME}/MACSio
+export PATH=${MACSIO_DIR}/build/macsio:$PATH
+
 # Configure RSBench location
 RSBENCH_DIR=${HOME}/RSBench
 export PATH=${RSBENCH_DIR}/openmp-threading:$PATH
