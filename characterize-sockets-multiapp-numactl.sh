@@ -7,8 +7,8 @@ function run_multiapp() {
     local socks=$1
     local logdir=$2
     local cpus=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
-    local insts=$((IS_UNIFIED ? 1 : socks))
-    local threads=$((IS_UNIFIED ? cpus * socks : cpus))
+    local insts=$((IS_MULTIPLE ? socks : 1))
+    local threads=$((IS_MULTIPLE ? cpus : cpus * socks))
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
@@ -46,22 +46,23 @@ function characterize_sockets_multiapp() {
 }
 
 function usage() {
-    echo "Characterize running app instances on different socket counts"
+    echo "Characterize running app instance(s) on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-p] [-u] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-p] [-u | -m] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -p: use only physical cores"
-    echo "    -u: unified execution - run same app instance on all sockets"
+    echo "    -u: unified execution - one app instance only (default, overrides -m)"
+    echo "    -m: multiple executions - one app instance per socket (overrides -u)"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
 }
 
-IS_UNIFIED=0
+IS_MULTIPLE=0
 IS_WARMUP=0
 IS_PHYS_ONLY=0
 SOCKET_COUNTS=()
-while getopts "a:s:puwh?" o; do
+while getopts "a:s:pumwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
@@ -73,7 +74,10 @@ while getopts "a:s:puwh?" o; do
             IS_PHYS_ONLY=1
             ;;
         u)
-            IS_UNIFIED=1
+            IS_MULTIPLE=0
+            ;;
+        m)
+            IS_MULTIPLE=1
             ;;
         w)
             IS_WARMUP=1
