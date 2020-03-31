@@ -9,13 +9,18 @@ function run_multiapp() {
     local cpus=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
     local insts=$((IS_MULTIPLE ? socks : 1))
     local threads=$((IS_MULTIPLE ? cpus : cpus * socks))
+    local OPTIONAL_PARAMS=()
+    if [ "$IS_PHYS_ONLY" -ne 0 ]; then
+        OPTIONAL_PARAMS+=(-p)
+    fi
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
         run-multiapp-numactl.sh -a "$APP_SCRIPT_PATH" \
                                 -i "$insts" -t $threads \
-                                -s "$socks" -c $cpus
+                                -s "$socks" -c "$TOPOLOGY_SOCKET_CORES" \
+                                "${OPTIONAL_PARAMS[@]}"
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
         return $rc

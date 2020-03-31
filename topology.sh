@@ -23,6 +23,10 @@ function topology_export() {
     export TOPOLOGY_SOCKET_CORES
     TOPOLOGY_SOCKET_CPUS=$((TOPOLOGY_CPUS / TOPOLOGY_SOCKETS))
     export TOPOLOGY_SOCKET_CPUS
+
+    # the following assume a homogeneous core configuration
+    TOPOLOGY_CORE_CPUS=$((TOPOLOGY_CPUS / TOPOLOGY_CORES))
+    export TOPOLOGY_CORE_CPUS
 }
 
 function topology_dbg() {
@@ -33,20 +37,40 @@ function topology_dbg() {
 
     echo "TOPOLOGY_SOCKET_CORES: $TOPOLOGY_SOCKET_CORES"
     echo "TOPOLOGY_SOCKET_CPUS: $TOPOLOGY_SOCKET_CPUS"
+
+    echo "TOPOLOGY_CORE_CPUS: $TOPOLOGY_CORE_CPUS"
 }
 
-# Get CPU range for socket $1, for $2 cpus, at optional offset $3
-# Does not verify that cpus or offset remain within socket!
+# Get CPU range for socket $1, for $2 cores, core offset $3, with $4 HTs/core
+# Does not verify that cores or offset remain within socket!
 function topology_sock_to_physcpubind() {
-    # assumes CPU numbers are ordered globally by all physical, then all virtual
+    # See: https://www.kernel.org/doc/Documentation/x86/topology.txt
+    # Assumes "Alternative enumeration" of CPU numbering (typical Intel), i.e.,
+    # ordered globally by all physical, then all virtual
     # (not interleaved at socket/core granularity, which is also a valid scheme)
+    # e.g.:
+    # [core 0] -> [thread 0] -> Linux CPU 0 # Physical
+    #          -> [thread 1] -> Linux CPU 2 # HyperThread
+    #          -> [thread 2] -> Linux CPU 3 # HyperThread
+    #          -> [thread 3] -> Linux CPU 4 # HyperThread
+    # [core 1] -> [thread 0] -> Linux CPU 1 # Physical
+    #          -> [thread 1] -> Linux CPU 5 # HyperThread
+    #          -> [thread 2] -> Linux CPU 6 # HyperThread
+    #          -> [thread 3] -> Linux CPU 7 # HyperThread
     local sock=$1
-    local cpus=$2
+    local cores=$2
     local off=$3
-    [ -z "$off" ] && off=0
-    local start=$(((sock * TOPOLOGY_SOCKET_CORES) + off))
-    local end=$((start + cpus - 1))
-    echo "${start}-${end}"
+    local hts=$4
+    local start_cpu=$(((sock * TOPOLOGY_SOCKET_CORES) + off))
+    local end_cpu=$((start_cpu + cores - 1))
+    local physcpubind="${start_cpu}-${end_cpu}"
+    if [ "$hts" -gt 0 ]; then
+        start_cpu=$(((TOPOLOGY_SOCKETS * TOPOLOGY_SOCKET_CORES) +
+                     (sock * TOPOLOGY_SOCKET_CORES) + off))
+        end_cpu=$((start_cpu + (hts * cores) - 1))
+        physcpubind+=",${start_cpu}-${end_cpu}"
+    fi
+    echo "$physcpubind"
 }
 
 topology_export
