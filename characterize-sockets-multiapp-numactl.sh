@@ -53,12 +53,11 @@ function characterize_sockets_multiapp() {
 function usage() {
     echo "Characterize running app instance(s) on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-p] [-u | -m] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-p] [-m] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -p: use only physical cores"
-    echo "    -u: unified execution - one app instance only (default, overrides -m)"
-    echo "    -m: multiple executions - one app instance per socket (overrides -u)"
+    echo "    -m: multiple executions - one app instance per socket (weak scaling)"
     echo "    -w: perform a warmup execution before characterization"
     echo "    -h: print help/usage and exit"
 }
@@ -67,7 +66,7 @@ IS_MULTIPLE=0
 IS_WARMUP=0
 IS_PHYS_ONLY=0
 SOCKET_COUNTS=()
-while getopts "a:s:pumwh?" o; do
+while getopts "a:s:pmwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
@@ -77,9 +76,6 @@ while getopts "a:s:pumwh?" o; do
             ;;
         p)
             IS_PHYS_ONLY=1
-            ;;
-        u)
-            IS_MULTIPLE=0
             ;;
         m)
             IS_MULTIPLE=1
