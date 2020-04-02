@@ -13,7 +13,8 @@ function schedule_cpus_sockets_share() {
             >&2 echo "Insufficient core count!"
             return 1
         fi
-        topology_sock_to_physcpubind $sock "$N_CORES_PER_INST" $off "$IS_USE_HT"
+        topology_sock_to_physcpubind $sock "$N_CORES_PER_INST" $off \
+                                     "$N_HT_PER_INST"
     done
 }
 
@@ -37,7 +38,7 @@ function schedule_cpus_sockets_own() {
                 cpus+=","
             fi
             cpus+=$(topology_sock_to_physcpubind $sock "$N_CORES_PER_SOCK" 0 \
-                                                 "$IS_USE_HT")
+                                                 "$N_HT_PER_INST")
         done
         echo "$cpus"
     done
@@ -57,13 +58,13 @@ function wait_all() {
 }
 
 function launch_app() {
-    local cpus=$1
-    local logdir=$2
+    local logdir=$1
+    shift
     mkdir "$logdir" || return $?
     (
         cd "$logdir" &&
-        run-app-numactl.sh -a "$APP_SCRIPT_PATH" -C "$cpus" \
-                           -t "$N_APP_THREADS_PER_INST" -l run-app.log
+        run-app-numactl.sh -a "$APP_SCRIPT_PATH" -t "$N_APP_THREADS_PER_INST" \
+                           -l run-app.log -- "$@"
     ) &
 }
 
@@ -128,8 +129,10 @@ topology_dbg
 
 # Compute how many cores we need for each app instance (depends on HyperThreads)
 if [ $IS_USE_HT -eq 0 ]; then
+    N_HT_PER_INST=0
     N_CORES_PER_INST=$N_APP_THREADS_PER_INST
 else
+    N_HT_PER_INST=$((TOPOLOGY_CORE_CPUS - 1))
     N_CORES_PER_INST=$((N_APP_THREADS_PER_INST / TOPOLOGY_CORE_CPUS))
     if ((N_APP_THREADS_PER_INST % TOPOLOGY_CORE_CPUS)); then
         # over-allocated on CPUs, e.g., one app thread but one core also has HTs
@@ -181,7 +184,7 @@ fi
 
 PIDS=()
 for cpus in "${CPU_SCHEDULES[@]}"; do
-    launch_app "$cpus" "cpus_${cpus}" || kill_all_and_die
+    launch_app "cpus_${cpus}" -l -C "$cpus" || kill_all_and_die
     PIDS+=($!)
 done
 wait_all "${PIDS[@]}"
