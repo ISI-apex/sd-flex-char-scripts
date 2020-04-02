@@ -9,7 +9,7 @@ Contents:
 * `env-reference.sh` - reference script for setting up the environment to locate apps
 * `topology.sh` - utility script for parsing system topology
 * `run-app-numactl.sh` - run an application using `numactl` and capture output
-* `run-multiapp-numactl.sh` - run multiple instances of an application using `numactl` and capture outputs
+* `run-multiapp-numactl.sh` - run (potentially) multiple instances of an application using `numactl` and capture outputs
 * `characterize-sockets-multiapp-numactl.sh` - run multiapp `numactl` applications for different socket counts
 * `run-app-openmpi.sh` - run an application using OpenMPI and capture output
 * `run-app-openmpi-omp.sh` - thin wrapper around `run-app-openmpi.sh` to map ranks by socket (OpenMP can be used within a socket)
@@ -48,9 +48,9 @@ Examples: Threading
 Running a (usually) threaded application is the most basic task.
 Threaded applications are executed using `numactl` to control CPU and memory policies.
 The script `run-app-numactl.sh` is not topology-aware, so the user is responsible for specifying an appropriate CPU set.
-For example, to run `ep.D.x` (from the NAS benchmarks) with 8 threads on logical (not necessarily physical) CPUs 0 through 7:
+For example, to run `ep.D.x` (from the NAS benchmarks) with local memory allocations and 8 threads on logical (not necessarily physical) CPUs 0 through 7:
 
-    ./run-app-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -C 0-7
+    ./run-app-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -- -l -C 0-7
 
 The app script `apps/npb-omp-ep.D.x.sh` defines how to run `ep.D.x` including configuring the threading, which in this case sets `OMP_NUM_THREADS` since the application uses OpenMP as its scaling model.
 
@@ -71,16 +71,17 @@ Log files are stored in directories of the form `cpus_CPUS` where `CPUS` is the 
 
 As its name implies, the script `characterize-sockets-multiapp-numactl.sh` wraps `run-multiapp-numactl.sh` and runs an application with different socket counts (and is thus topology-aware).
 The total number of threads in each execution is equal to the total number of available CPUs for the requested socket count.
-Suggested options include `-p` (using only physical CPUs, no HyperThreads), `-u` (unified execution, i.e., strong scaling instead of weak scaling), and `-w` (perform a warmup execution by running in all sockets first before starting the characterization).
+Suggested options include `-p` (using only physical CPUs, no HyperThreads) and `-w` (perform a warmup execution by running in all sockets first before starting the characterization).
+The `-m` option supports running multiple application instances (i.e., weak scaling instead of strong scaling).
 By default, the script only uses socket counts that are divisors of the total number of available sockets.
 For example, if the system has 4 sockets, the following would characterize socket counts 1, 2, and 4:
 
-    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -u -w
+    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w
 
 To instead specify the socket counts yourself, add a `-s` parameter for each desired socket count.
 For example, to characterize socket counts 1, 2, 3, and 4:
 
-    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -u -w $(for s in {1..4}; do printf " -s %d " $s; done)
+    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w $(for s in {1..4}; do printf " -s %d " $s; done)
 
 Log files are stored in directories of the form `sockets_N` where `N` is the socket count.
 
