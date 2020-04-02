@@ -127,17 +127,12 @@ APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
 source topology.sh
 topology_dbg
 
-# Compute how many cores we need for each app instance (depends on HyperThreads)
-if [ $IS_USE_HT -eq 0 ]; then
-    N_CPU_THREADS_PER_CORE=0
-    N_CORES_PER_INST=$N_APP_THREADS_PER_INST
-else
-    N_CPU_THREADS_PER_CORE=$TOPOLOGY_CORE_CPUS
-    N_CORES_PER_INST=$((N_APP_THREADS_PER_INST / N_CPU_THREADS_PER_CORE))
-    if ((N_APP_THREADS_PER_INST % N_CPU_THREADS_PER_CORE)); then
-        # over-allocated on CPUs, e.g., one app thread but one core also has HTs
-        ((N_CORES_PER_INST++))
-    fi
+# Compute how many cores and CPU threads/core we need for each app instance
+N_CPU_THREADS_PER_CORE=$((IS_USE_HT ? TOPOLOGY_CORE_CPUS : 1))
+N_CORES_PER_INST=$((N_APP_THREADS_PER_INST / N_CPU_THREADS_PER_CORE))
+if ((N_APP_THREADS_PER_INST % N_CPU_THREADS_PER_CORE)); then
+    # over-allocated on CPUs, e.g., one app thread but one core also has HTs
+    ((N_CORES_PER_INST++))
 fi
 
 # enforce that topology is respected
