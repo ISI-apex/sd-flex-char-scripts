@@ -43,3 +43,9 @@ export PATH=${RSBENCH_DIR}/openmp-threading:$PATH
 # Configure XSBench location
 XSBENCH_DIR=${HOME}/XSBench
 export PATH=${XSBENCH_DIR}/openmp-threading:$PATH
+
+MEGAHIT_DIR=${HOME}/megahit
+export PATH=${MEGAHIT_DIR}/build:$PATH
+
+MHMXX_DIR=${HOME}/mhmxx
+export PATH=${MHMXX_DIR}/build:$PATH
