@@ -41,8 +41,8 @@ function topology_dbg() {
     echo "TOPOLOGY_CORE_CPUS: $TOPOLOGY_CORE_CPUS"
 }
 
-# Get CPU range for socket $1, for $2 cores, core offset $3, with $4 HTs/core
-# Does not verify that cores or offset remain within socket!
+# Get CPU range for socket $1, for $2 cores, core offset $3, $4 threads/core
+# Does not verify that cores/threads remain within the socket!
 function topology_sock_to_physcpubind() {
     # See: https://www.kernel.org/doc/Documentation/x86/topology.txt
     # Assumes "Alternative enumeration" of CPU numbering (typical Intel), i.e.,
@@ -60,15 +60,28 @@ function topology_sock_to_physcpubind() {
     local sock=$1
     local cores=$2
     local off=$3
-    local hts=$4
+    local threads_per_core=$4
     local start_cpu=$(((sock * TOPOLOGY_SOCKET_CORES) + off))
     local end_cpu=$((start_cpu + cores - 1))
     local physcpubind="${start_cpu}-${end_cpu}"
-    if [ "$hts" -gt 0 ]; then
-        start_cpu=$(((TOPOLOGY_SOCKETS * TOPOLOGY_SOCKET_CORES) +
-                     (sock * TOPOLOGY_SOCKET_CORES) + off))
-        end_cpu=$((start_cpu + (hts * cores) - 1))
-        physcpubind+=",${start_cpu}-${end_cpu}"
+    if [ "$threads_per_core" -gt 1 ]; then
+        if [ "$threads_per_core" -eq "$TOPOLOGY_CORE_CPUS" ]; then
+            # group the thread CPU range into a single expression
+            start_cpu=$(((TOPOLOGY_SOCKETS * TOPOLOGY_SOCKET_CORES) +
+                         (sock * (TOPOLOGY_SOCKET_CPUS - TOPOLOGY_SOCKET_CORES)) +
+                          ((TOPOLOGY_CORE_CPUS - 1) * off)))
+            end_cpu=$((start_cpu + ((threads_per_core - 1) * cores) - 1))
+            physcpubind+=",${start_cpu}-${end_cpu}"
+        else
+            # need a separate CPU range expression for each core's threads
+            for ((c=0; c<cores; c++)); do
+                start_cpu=$(((TOPOLOGY_SOCKETS * TOPOLOGY_SOCKET_CORES) +
+                             (sock * (TOPOLOGY_SOCKET_CPUS - TOPOLOGY_SOCKET_CORES)) +
+                              ((TOPOLOGY_CORE_CPUS - 1) * (off + c))))
+                end_cpu=$((start_cpu + (threads_per_core - 1) - 1))
+                physcpubind+=",${start_cpu}-${end_cpu}"
+            done
+        fi
     fi
     echo "$physcpubind"
 }

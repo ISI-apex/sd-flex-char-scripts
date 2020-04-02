@@ -14,7 +14,7 @@ function schedule_cpus_sockets_share() {
             return 1
         fi
         topology_sock_to_physcpubind $sock "$N_CORES_PER_INST" $off \
-                                     "$N_HT_PER_INST"
+                                     "$N_CPU_THREADS_PER_CORE"
     done
 }
 
@@ -38,7 +38,7 @@ function schedule_cpus_sockets_own() {
                 cpus+=","
             fi
             cpus+=$(topology_sock_to_physcpubind $sock "$N_CORES_PER_SOCK" 0 \
-                                                 "$N_HT_PER_INST")
+                                                 "$N_CPU_THREADS_PER_CORE")
         done
         echo "$cpus"
     done
@@ -129,12 +129,12 @@ topology_dbg
 
 # Compute how many cores we need for each app instance (depends on HyperThreads)
 if [ $IS_USE_HT -eq 0 ]; then
-    N_HT_PER_INST=0
+    N_CPU_THREADS_PER_CORE=0
     N_CORES_PER_INST=$N_APP_THREADS_PER_INST
 else
-    N_HT_PER_INST=$((TOPOLOGY_CORE_CPUS - 1))
-    N_CORES_PER_INST=$((N_APP_THREADS_PER_INST / TOPOLOGY_CORE_CPUS))
-    if ((N_APP_THREADS_PER_INST % TOPOLOGY_CORE_CPUS)); then
+    N_CPU_THREADS_PER_CORE=$TOPOLOGY_CORE_CPUS
+    N_CORES_PER_INST=$((N_APP_THREADS_PER_INST / N_CPU_THREADS_PER_CORE))
+    if ((N_APP_THREADS_PER_INST % N_CPU_THREADS_PER_CORE)); then
         # over-allocated on CPUs, e.g., one app thread but one core also has HTs
         ((N_CORES_PER_INST++))
     fi
