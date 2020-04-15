@@ -3,6 +3,17 @@
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 export PATH=$THIS_DIR:$PATH # to run other scripts
 
+function schedule_mem_nodes_interleave() {
+    local nsock_per_inst=$((N_CORES_PER_INST / N_CORES_PER_SOCK))
+    if ((N_CORES_PER_INST % N_CORES_PER_SOCK)); then
+        ((nsock_per_inst++)) # app was not a precise fit to socket CPUs
+    fi
+    for ((i = 0; i < N_APP_INSTANCES; i++)); do
+        local sock_start=$(((i * nsock_per_inst) % N_SOCKETS))
+        topology_socks_to_nodes $sock_start $nsock_per_inst
+    done
+}
+
 # Round-robin assignment of app instances to sockets (>=1 instance per socket).
 # Allows for sockets and cores to remain unassigned, but not shared.
 function schedule_cpus_sockets_share() {
@@ -72,12 +83,15 @@ function usage() {
     echo "Run >=1 app instance on >=1 sockets using numactl"
     echo "Creates and writes to directories in the form 'cpus_M-N[,O-P]*'"
     echo ""
-    echo "Usage: $0 -a SH [-i N] [-t N] [-s N] [-c N] [-ph]"
+    echo "Usage: $0 -a SH [-i N] [-t N] [-s N] [-c N] [-m POLICY] [-ph]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -i N: number of app instances (default=1)"
     echo "    -t N: number of threads per app instance (default=1)"
     echo "    -s N: number of sockets (default=1)"
     echo "    -c N: number of cores per socket (default=1)"
+    echo "    -m POLICY: numactl memory policy (default=\"local\"), one of:"
+    echo "       local: use '-l' option"
+    echo "       interleave: use '-i' option"
     echo "    -p: use only physical cores"
     echo "    -h: print help/usage and exit"
 }
@@ -87,7 +101,8 @@ N_APP_THREADS_PER_INST=1
 N_SOCKETS=1
 N_CORES_PER_SOCK=1
 IS_USE_HT=1
-while getopts "a:i:t:s:c:ph?" o; do
+MEM_POLICY="local"
+while getopts "a:i:t:s:c:m:ph?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
@@ -103,6 +118,13 @@ while getopts "a:i:t:s:c:ph?" o; do
             ;;
         c)
             N_CORES_PER_SOCK=$OPTARG
+            ;;
+        m)
+            if [ "$OPTARG" != "local" ] && [ "$OPTARG" != "interleave" ]; then
+                usage
+                exit 1
+            fi
+            MEM_POLICY="$OPTARG"
             ;;
         p)
             IS_USE_HT=0
@@ -177,9 +199,23 @@ else
     CPU_SCHEDULES=($(schedule_cpus_sockets_own)) || exit $?
 fi
 
+MEM_SCHEDULES=($(schedule_mem_nodes_interleave))
+if [ ${#MEM_SCHEDULES[@]} -ne ${#CPU_SCHEDULES[@]} ]; then
+    >&2 echo "BUG: len(MEM_SCHEDULES) != len(CPU_SCHEDULES)"
+    exit 1
+fi
+
 PIDS=()
-for cpus in "${CPU_SCHEDULES[@]}"; do
-    launch_app "cpus_${cpus}" -l -C "$cpus" || kill_all_and_die
+for ((i=0; i<${#CPU_SCHEDULES[@]}; i++)); do
+    NUMACTL_ARGS=()
+    if [ "$MEM_POLICY" == "local" ]; then
+        NUMACTL_ARGS+=(-l)
+    elif [ "$MEM_POLICY" == "interleave" ]; then
+        NUMACTL_ARGS+=(-i "${MEM_SCHEDULES[i]}")
+    fi
+    cpus=${CPU_SCHEDULES[i]}
+    NUMACTL_ARGS+=(-C "$cpus")
+    launch_app "cpus_${cpus}" "${NUMACTL_ARGS[@]}" || kill_all_and_die
     PIDS+=($!)
 done
 wait_all "${PIDS[@]}"
