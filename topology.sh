@@ -86,4 +86,33 @@ function topology_sock_to_physcpubind() {
     echo "$physcpubind"
 }
 
+# Get node range for socket counts
+# Does not verify that socket counts do not overflow
+function topology_socks_to_nodes() {
+    local sock_start=$1
+    local sock_count=$2
+    local scale
+    local nodes=""
+    if [ "$TOPOLOGY_NODES" -le "$TOPOLOGY_SOCKETS" ]; then
+        # 1 or more sockets per node
+        scale=$((TOPOLOGY_SOCKETS / TOPOLOGY_NODES))
+        node_start=$((sock_start / scale))
+        node_end=$(((sock_start + sock_count - 1) / scale))
+        if [ "$node_start" -eq "$node_end" ]; then
+            nodes=$node_start
+        else
+            nodes="${node_start}-${node_end}"
+        fi
+    else # [ "$TOPOLOGY_NODES" -gt "$TOPOLOGY_SOCKETS" ]
+        # multiple nodes per socket
+        # TODO: This may over-allocate when only a partial socket is needed
+        #       Add param for cores to compute better node_{start,end}?
+        scale=$((TOPOLOGY_NODES / TOPOLOGY_SOCKETS))
+        node_start=$((sock_start * scale))
+        node_end=$((((sock_start + sock_count - 1) * scale) + (scale - 1)))
+        nodes="${node_start}-${node_end}"
+    fi
+    echo "$nodes"
+}
+
 topology_export
