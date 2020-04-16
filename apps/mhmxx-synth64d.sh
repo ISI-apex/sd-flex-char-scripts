@@ -11,9 +11,9 @@ function app_pre() {
         return 1
     fi
     APP_CMD+=(upcxx-run -shared-heap "5%" -n "$1" --
-              "$APP_BIN" --cores-per-node "$MHMXX_CORES_PER_NODE" -r "$DATASET" -i 300:30 -k 21,33,55,77,99 -s 99,33)
+              "$APP_BIN" --cores-per-node "$MHMXX_CORES_PER_NODE" -r "$DATASET" -i "300:30" -k "21,33,55,77,99" -s "99,33")
 }
 
 function app_post() {
-    rm -f *.fast*
+    rm -f ./*.fast*
 }
