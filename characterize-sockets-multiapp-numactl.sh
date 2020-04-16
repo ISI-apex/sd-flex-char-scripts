@@ -9,7 +9,7 @@ function run_multiapp() {
     local cpus=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
     local insts=$((IS_MULTIPLE ? socks : 1))
     local threads=$((IS_MULTIPLE ? cpus : cpus * socks))
-    local OPTIONAL_PARAMS=()
+    local OPTIONAL_PARAMS=("${PASSTHROUGH_ARGS[@]}")
     if [ "$IS_PHYS_ONLY" -ne 0 ]; then
         OPTIONAL_PARAMS+=(-p)
     fi
@@ -53,7 +53,7 @@ function characterize_sockets_multiapp() {
 function usage() {
     echo "Characterize running app instance(s) on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-p] [-m] [-w] [-h]"
+    echo "Usage: $0 -a SH [-s N]+ [-p] [-m] [-w] [-h] -- [run-multiapp-numactl.sh args]"
     echo "    -a SH: bash script to source with app launch vars"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -p: use only physical cores"
@@ -94,6 +94,7 @@ while getopts "a:s:pmwh?" o; do
     esac
 done
 shift $((OPTIND-1))
+PASSTHROUGH_ARGS=("$@")
 if [ -z "$APP_SCRIPT" ] || [ ! -f "$APP_SCRIPT" ]; then
     >&2 usage
     exit 1
