@@ -47,7 +47,7 @@ Examples: Threading
 
 Running a (usually) threaded application is the most basic task.
 Threaded applications are executed using `numactl` to control CPU and memory policies.
-The script `run-app-numactl.sh` is not topology-aware, so the user is responsible for specifying an appropriate CPU set.
+The script `run-app-numactl.sh` is not topology-aware, so the user is responsible for specifying an appropriate CPU set and memory policy.
 For example, to run `ep.D.x` (from the NAS benchmarks) with local memory allocations and 8 threads on logical (not necessarily physical) CPUs 0 through 7:
 
     ./run-app-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -- -l -C 0-7
@@ -57,11 +57,11 @@ The app script `apps/npb-omp-ep.D.x.sh` defines how to run `ep.D.x` including co
 The script `run-multiapp-numactl.sh` wraps `run-app-numactl.sh` and provides some topology awareness.
 For example, to run the same `ep.D.x` execution as above (assuming the system has at least 8 CPUs per socket):
 
-    ./run-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -c 8
+    ./run-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -c 8 -m local
 
 Or to scale the 8 threads across 2 sockets, using 4 CPUs on each socket:
 
-    ./run-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -s 2 -c 4
+    ./run-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -t 8 -s 2 -c 4 -m local
 
 As the script name suggests, it's possible to run multiple copies of the application in parallel---a form of weak scaling.
 This is more complex and will not be documented here at this time.
@@ -76,12 +76,12 @@ The `-m` option supports running multiple application instances (i.e., weak scal
 By default, the script only uses socket counts that are divisors of the total number of available sockets.
 For example, if the system has 4 sockets, the following would characterize socket counts 1, 2, and 4:
 
-    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w
+    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w -- -m local
 
 To instead specify the socket counts yourself, add a `-s` parameter for each desired socket count.
 For example, to characterize socket counts 1, 2, 3, and 4:
 
-    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w $(for s in {1..4}; do printf " -s %d " $s; done)
+    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w $(for s in {1..4}; do printf " -s %d " $s; done) -- -m local
 
 Log files are stored in directories of the form `sockets_N` where `N` is the socket count.
 
