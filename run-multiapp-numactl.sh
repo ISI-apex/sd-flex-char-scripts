@@ -89,7 +89,7 @@ function usage() {
     echo "    -t N: number of threads per app instance (default=1)"
     echo "    -s N: number of sockets (default=1)"
     echo "    -c N: number of cores per socket (default=1)"
-    echo "    -m POLICY: numactl memory policy (default=\"local\"), one of:"
+    echo "    -m POLICY: numactl memory policy (default=NONE), one of:"
     echo "       local: use '-l' option"
     echo "       interleave: use '-i' option"
     echo "    -p: use only physical cores"
@@ -101,7 +101,7 @@ N_APP_THREADS_PER_INST=1
 N_SOCKETS=1
 N_CORES_PER_SOCK=1
 IS_USE_HT=1
-MEM_POLICY="local"
+MEM_POLICY=
 while getopts "a:i:t:s:c:m:ph?" o; do
     case "$o" in
         a)
@@ -121,7 +121,7 @@ while getopts "a:i:t:s:c:m:ph?" o; do
             ;;
         m)
             if [ "$OPTARG" != "local" ] && [ "$OPTARG" != "interleave" ]; then
-                usage
+                >&2 usage
                 exit 1
             fi
             MEM_POLICY="$OPTARG"
