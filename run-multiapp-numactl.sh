@@ -55,9 +55,8 @@ function schedule_cpus_sockets_own() {
     done
 }
 
-function kill_all_and_die() {
+function trap_cleanup() {
     kill 0
-    exit 1
 }
 
 function wait_all() {
@@ -205,6 +204,8 @@ if [ ${#MEM_SCHEDULES[@]} -ne ${#CPU_SCHEDULES[@]} ]; then
     exit 1
 fi
 
+trap trap_cleanup EXIT
+
 PIDS=()
 for ((i=0; i<${#CPU_SCHEDULES[@]}; i++)); do
     NUMACTL_ARGS=()
@@ -215,7 +216,12 @@ for ((i=0; i<${#CPU_SCHEDULES[@]}; i++)); do
     fi
     cpus=${CPU_SCHEDULES[i]}
     NUMACTL_ARGS+=(-C "$cpus")
-    launch_app "cpus_${cpus}" "${NUMACTL_ARGS[@]}" || kill_all_and_die
+    launch_app "cpus_${cpus}" "${NUMACTL_ARGS[@]}" || exit $?
     PIDS+=($!)
 done
 wait_all "${PIDS[@]}"
+rc=$?
+
+trap - EXIT
+
+exit $rc
