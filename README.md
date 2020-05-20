@@ -6,6 +6,7 @@ Scripts to automate characterizing benchmark application behavior.
 Contents:
 
 * `apps/` - directory containing application launch configurations
+* `interceptors/` - directory containing interceptor configurations
 * `env-reference.sh` - reference script for setting up the environment to locate apps
 * `topology.sh` - utility script for parsing system topology
 * `run-app-numactl.sh` - run an application using `numactl` and capture output
