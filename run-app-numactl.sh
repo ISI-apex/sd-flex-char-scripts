@@ -4,6 +4,11 @@ function datetime() {
     date --utc +%FT%T.%3NZ
 }
 
+function trap_interceptor() {
+    echo "$INTERCEPTOR_NAME: TRAP: interceptor_stop"
+    interceptor_stop
+}
+
 function usage() {
     echo "Run an app using numactl"
     echo "User must pass any CPU and memory binding args through to numactl"
@@ -65,6 +70,7 @@ fi
 echo "$APP_NAME: app_pre"
 app_pre "$NTHREADS" || exit $?
 if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+    trap trap_interceptor EXIT
     echo "$INTERCEPTOR_NAME: interceptor_start"
     interceptor_start || exit $?
 fi
@@ -77,6 +83,7 @@ echo "$APP_NAME: end: $(datetime)" | tee -a "$LOG"
 if [ -n "$INTERCEPTOR_SCRIPT" ]; then
     echo "$INTERCEPTOR_NAME: interceptor_stop"
     interceptor_stop || rc=$?
+    trap - EXIT
 fi
 echo "$APP_NAME: app_post"
 app_post || exit $?
