@@ -1,3 +1,10 @@
 #!/bin/bash
-export INTERCEPTOR_REQUIRE_ROOT=0
-export INTERCEPTOR_CMD=()
+export INTERCEPTOR_NAME=null
+
+function interceptor_start() {
+    :
+}
+
+function interceptor_stop() {
+    :
+}
