@@ -2,7 +2,7 @@
 export INTERCEPTOR_NAME=pcm-numa
 
 PCM_BIN=pcm-numa.x
-PCM_PATH=$(which "${PCM_BIN}") # PATH not preserved by sudo, so get full path
+PCM_PATH=$(which "${PCM_BIN}") || return $? # PATH not preserved by sudo, so get full path
 PCM_INTERVAL_SEC=1.0
 PCM_CSV=pcm-numa.csv
 PCM_CMD=("${PCM_PATH}" -csv="${PCM_CSV}" "${PCM_INTERVAL_SEC}")
