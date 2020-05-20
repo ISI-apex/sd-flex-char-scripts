@@ -5,13 +5,13 @@ PCM_BIN=pcm-memory.x
 PCM_PATH=$(which "${PCM_BIN}") # PATH not preserved by sudo, so get full path
 PCM_INTERVAL_SEC=1.0
 PCM_CSV=pcm-memory.csv
+PCM_CMD=("${PCM_PATH}" -csv="${PCM_CSV}" "${PCM_INTERVAL_SEC}")
 
 PCM_PID=
 
 function interceptor_start() {
-    local CMD=("${PCM_PATH}" -csv="${PCM_CSV}" "${PCM_INTERVAL_SEC}")
-    echo "${INTERCEPTOR_NAME}: ${CMD[*]}"
-    sudo -n "${CMD[@]}" &
+    echo "${INTERCEPTOR_NAME}: ${PCM_CMD[*]}"
+    sudo -n "${PCM_CMD[@]}" &
     PCM_PID=$!
     # TODO: This is dirty and probably unreliable
     sleep 1 # let PCM initialize, and if it fails, hopefully it fails fast
