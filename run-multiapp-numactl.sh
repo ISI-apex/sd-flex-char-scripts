@@ -56,6 +56,10 @@ function schedule_cpus_sockets_own() {
 }
 
 function trap_cleanup() {
+    if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+        echo "$INTERCEPTOR_NAME: TRAP: interceptor_stop"
+        interceptor_stop
+    fi
     kill 0
 }
 
@@ -82,8 +86,9 @@ function usage() {
     echo "Run >=1 app instance on >=1 sockets using numactl"
     echo "Creates and writes to directories in the form 'cpus_M-N[,O-P]*'"
     echo ""
-    echo "Usage: $0 -a SH [-i N] [-t N] [-s N] [-c N] [-m POLICY] [-ph]"
+    echo "Usage: $0 -a SH [-g SH] [-i N] [-t N] [-s N] [-c N] [-m POLICY] [-ph]"
     echo "    -a SH: bash script to source with app launch vars"
+    echo "    -g SH: bash script to source with global interceptor configurations"
     echo "    -i N: number of app instances (default=1)"
     echo "    -t N: number of threads per app instance (default=1)"
     echo "    -s N: number of sockets (default=1)"
@@ -95,16 +100,20 @@ function usage() {
     echo "    -h: print help/usage and exit"
 }
 
+INTERCEPTOR_SCRIPT=
 N_APP_INSTANCES=1
 N_APP_THREADS_PER_INST=1
 N_SOCKETS=1
 N_CORES_PER_SOCK=1
 IS_USE_HT=1
 MEM_POLICY=
-while getopts "a:i:t:s:c:m:ph?" o; do
+while getopts "a:i:t:s:c:m:g:ph?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
+            ;;
+        g)
+            INTERCEPTOR_SCRIPT=$OPTARG
             ;;
         i)
             N_APP_INSTANCES=$OPTARG
@@ -144,6 +153,13 @@ if [ -z "$APP_SCRIPT" ] || [ ! -f "$APP_SCRIPT" ]; then
     exit 1
 fi
 APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
+
+if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+    source "$INTERCEPTOR_SCRIPT" || exit $?
+    if [ -z "$INTERCEPTOR_NAME" ]; then
+        INTERCEPTOR_NAME="<UNKNOWN>"
+    fi
+fi
 
 source topology.sh
 topology_dbg
@@ -206,6 +222,11 @@ fi
 
 trap trap_cleanup EXIT
 
+if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+    echo "$INTERCEPTOR_NAME: interceptor_start"
+    interceptor_start || exit $?
+fi
+
 PIDS=()
 for ((i=0; i<${#CPU_SCHEDULES[@]}; i++)); do
     NUMACTL_ARGS=()
@@ -221,6 +242,11 @@ for ((i=0; i<${#CPU_SCHEDULES[@]}; i++)); do
 done
 wait_all "${PIDS[@]}"
 rc=$?
+
+if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+    echo "$INTERCEPTOR_NAME: interceptor_stop"
+    interceptor_stop || rc=$?
+fi
 
 trap - EXIT
 
