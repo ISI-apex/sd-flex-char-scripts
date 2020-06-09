@@ -7,16 +7,22 @@ function run_app() {
     local socks=$1
     local logdir=$2
     local cpus_per_sock=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
+    local EXTRA_PARAMS=()
+    if [ -n "$INTERCEPTOR_SCRIPT" ]; then
+        EXTRA_PARAMS+=(-i "$INTERCEPTOR_SCRIPT")
+    fi
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
         if [ "$IS_USE_THREADS" -eq 1 ]; then
             run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -m socket \
-                               -n "$socks" -t "$cpus_per_sock"
+                               -n "$socks" -t "$cpus_per_sock" \
+                               "${EXTRA_PARAMS[@]}"
         else
             local np=$((cpus_per_sock * socks))
-            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np"
+            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np" \
+                               "${EXTRA_PARAMS[@]}"
         fi
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
@@ -50,8 +56,9 @@ function characterize_sockets() {
 function usage() {
     echo "Characterize running a MPI app on different socket counts"
     echo ""
-    echo "Usage: $0 -a SH [-s N]+ [-t] [-p] [-w] [-h]"
+    echo "Usage: $0 -a SH [-i SH] [-s N]+ [-t] [-p] [-w] [-h]"
     echo "    -a SH: bash script to source with app launch vars"
+    echo "    -i SH: bash script to source with interceptor configurations"
     echo "    -s N: a socket count to characterize (default = algorithmically selected)"
     echo "    -t: use threads within ranks (implies map-by 'socket' instead of 'core')"
     echo "    -p: use only physical cores"
@@ -63,10 +70,13 @@ IS_WARMUP=0
 IS_USE_THREADS=0
 IS_PHYS_ONLY=0
 SOCKET_COUNTS=()
-while getopts "a:s:tpwh?" o; do
+while getopts "a:i:s:tpwh?" o; do
     case "$o" in
         a)
             APP_SCRIPT=$OPTARG
+            ;;
+        i)
+            INTERCEPTOR_SCRIPT=$(readlink -f "$OPTARG") # b/c we cd later
             ;;
         s)
             SOCKET_COUNTS+=($OPTARG)
