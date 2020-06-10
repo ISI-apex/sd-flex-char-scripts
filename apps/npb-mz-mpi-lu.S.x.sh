@@ -4,7 +4,7 @@ export APP_CMD=(lu-mz.S.x)
 
 function app_pre() {
     export OMP_NUM_THREADS=$2
-    export OMP_PROC_BIND=TRUE
+    [ -z "$OMP_PROC_BIND" ] && export OMP_PROC_BIND=TRUE
 }
 
 function app_post() {
