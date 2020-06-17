@@ -6,24 +6,34 @@ export PATH=$THIS_DIR:$PATH # to run other scripts
 function run_app() {
     local socks=$1
     local logdir=$2
+    local PARAMS=(-a "$APP_SCRIPT_PATH" -l "run-app.log")
+    local MPI_OPTIONS=()
+    # Determine np param and its PE suffix
     local cpus_per_sock=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
-    local EXTRA_PARAMS=()
+    if [ "$IS_USE_THREADS" -eq 1 ]; then
+        PARAMS+=(-n "$socks" -t "$cpus_per_sock")
+    else
+        local np=$((cpus_per_sock * socks))
+        PARAMS+=(-n "$np" -t 1)
+    fi
+    # Determine map-by and bind-to params
+    if [ "$IS_USE_THREADS" -eq 1 ]; then
+        PARAMS+=(-m "socket" -b "core")
+    elif [ "$IS_PHYS_ONLY" -eq 1 ]; then
+        PARAMS+=(-m "core" -b "core")
+    else
+        PARAMS+=(-m "hwthread" -b "hwthread")
+        MPI_OPTIONS+=(--use-hwthread-cpus)
+    fi
+    # Add interceptor, if requested
     if [ -n "$INTERCEPTOR_SCRIPT" ]; then
-        EXTRA_PARAMS+=(-i "$INTERCEPTOR_SCRIPT")
+        PARAMS+=(-i "$INTERCEPTOR_SCRIPT")
     fi
     mkdir "$logdir" || return $?
     (
         cd "$logdir"
         echo "Characterize: total socket(s): start: $socks"
-        if [ "$IS_USE_THREADS" -eq 1 ]; then
-            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -m socket \
-                               -n "$socks" -t "$cpus_per_sock" \
-                               "${EXTRA_PARAMS[@]}"
-        else
-            local np=$((cpus_per_sock * socks))
-            run-app-openmpi.sh -a "$APP_SCRIPT_PATH" -l run-app.log -n "$np" \
-                               "${EXTRA_PARAMS[@]}"
-        fi
+        run-app-openmpi.sh "${PARAMS[@]}" -- "${MPI_OPTIONS[@]}"
         local rc=$?
         echo "Characterize: total socket(s): end: $socks"
         return $rc
