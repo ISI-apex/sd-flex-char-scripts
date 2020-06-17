@@ -7,7 +7,7 @@ function run_app() {
     local socks=$1
     local logdir=$2
     local PARAMS=(-a "$APP_SCRIPT_PATH" -l "run-app.log")
-    local MPI_OPTIONS=()
+    local MPI_OPTIONS=(--mca btl ^openib) # ignore IB errors
     # Determine np param and its PE suffix
     local cpus_per_sock=$((IS_PHYS_ONLY ? TOPOLOGY_SOCKET_CORES : TOPOLOGY_SOCKET_CPUS))
     if [ "$IS_USE_THREADS" -eq 1 ]; then
