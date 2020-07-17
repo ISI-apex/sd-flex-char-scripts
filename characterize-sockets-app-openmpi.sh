@@ -18,7 +18,13 @@ function run_app() {
     fi
     # Determine map-by and bind-to params
     if [ "$IS_USE_THREADS" -eq 1 ]; then
-        PARAMS+=(-m "socket" -b "core")
+        PARAMS+=(-m "socket")
+        if [ "$IS_PHYS_ONLY" -eq 1 ]; then
+            PARAMS+=(-b "core")
+        else
+            PARAMS+=(-b "hwthread")
+            MPI_OPTIONS+=(--use-hwthread-cpus)
+        fi
     elif [ "$IS_PHYS_ONLY" -eq 1 ]; then
         PARAMS+=(-m "core" -b "core")
     else
