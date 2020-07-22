@@ -4,6 +4,7 @@ DATASET=/dev/shm/gut-5x.fastq.gz
 export APP_CMD=(megahit --12 "$DATASET")
 
 function app_pre() {
+    [ -z "$OMP_PROC_BIND" ] && export OMP_PROC_BIND=TRUE || true
     # Megahit fails to discover total memory on the sd-flex
     local PAGE_SIZE
     local PAGE_COUNT
