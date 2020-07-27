@@ -17,7 +17,7 @@ function mhmxx_clean_data() {
 }
 
 function mhmxx_clean_dir() {
-    if [ -n "$MHMXX_CLEAN_OUTDIR" ] || [ "$MHMXX_CLEAN_OUTDIR" -ne 0 ]; then
+    if [ -z "$MHMXX_CLEAN_OUTDIR" ] || [ "$MHMXX_CLEAN_OUTDIR" -ne 0 ]; then
         rm -rf "$MHMXX_OUTDIR"
     fi
 }
