@@ -1,6 +1,6 @@
 #!/bin/bash
 export APP_NAME="mhmxx-common"
-export APP_CMD=(mhmxx.py)
+export APP_CMD=(mhmxx.py --checkpoint=off --force-bloom=on)
 
 # Must set this before app_pre is called
 export MHMXX_DATASET
