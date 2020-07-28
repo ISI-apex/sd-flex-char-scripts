@@ -27,17 +27,6 @@ function run_multiapp() {
     )
 }
 
-function get_default_socket_counts() {
-    local sockets=()
-    for ((s = 1; s <= TOPOLOGY_SOCKETS; s++)); do
-        local mod=$((TOPOLOGY_SOCKETS % s))
-        if [ $mod -eq 0 ]; then
-            sockets+=($s) # a balanced configuration
-        fi
-    done
-    echo "${sockets[@]}"
-}
-
 function characterize_sockets_multiapp() {
     for s in "$@"; do
         local logdir="sockets_${s}"
@@ -55,7 +44,7 @@ function usage() {
     echo ""
     echo "Usage: $0 -a SH [-s N]+ [-p] [-m] [-w] [-h] -- [run-multiapp-numactl.sh args]"
     echo "    -a SH: bash script to source with app launch vars"
-    echo "    -s N: a socket count to characterize (default = algorithmically selected)"
+    echo "    -s N: a socket count to characterize (default = all sockets)"
     echo "    -p: use only physical cores"
     echo "    -m: multiple executions - one app instance per socket (weak scaling)"
     echo "    -w: perform a warmup execution before characterization"
@@ -104,7 +93,7 @@ APP_SCRIPT_PATH=$(readlink -f "$APP_SCRIPT") # b/c we cd later
 source topology.sh
 
 if [ ${#SOCKET_COUNTS[@]} -eq 0 ]; then
-    SOCKET_COUNTS=($(get_default_socket_counts))
+    SOCKET_COUNTS=($(seq 1 "$TOPOLOGY_SOCKETS"))
 else
     for s in "${SOCKET_COUNTS[@]}"; do
         if [ "$s" -lt 1 ] || [ "$s" -gt "$TOPOLOGY_SOCKETS" ]; then
