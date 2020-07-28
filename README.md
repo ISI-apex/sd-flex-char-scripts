@@ -74,15 +74,14 @@ As its name implies, the script `characterize-sockets-multiapp-numactl.sh` wraps
 The total number of threads in each execution is equal to the total number of available CPUs for the requested socket count.
 Suggested options include `-p` (using only physical CPUs, no HyperThreads) and `-w` (perform a warmup execution by running in all sockets first before starting the characterization).
 The `-m` option supports running multiple application instances (i.e., weak scaling instead of strong scaling).
-By default, the script only uses socket counts that are divisors of the total number of available sockets.
-For example, if the system has 4 sockets, the following would characterize socket counts 1, 2, and 4:
+For example, the following would characterize all socket counts using physical cores and a warmup execution:
 
     ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w -- -m local
 
 To instead specify the socket counts yourself, add a `-s` parameter for each desired socket count.
-For example, to characterize socket counts 1, 2, 3, and 4:
+For example, to characterize socket counts 1 and 4:
 
-    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w $(for s in {1..4}; do printf " -s %d " $s; done) -- -m local
+    ./characterize-sockets-multiapp-numactl.sh -a apps/npb-omp-ep.D.x.sh -p -w -s 1 -s 4 -- -m local
 
 Log files are stored in directories of the form `sockets_N` where `N` is the socket count.
 
@@ -102,9 +101,9 @@ Log files are stored in directories created by OpenMPI of the form `1/rank.N/std
 As its name implies, the script `characterize-sockets-app-openmpi.sh` wraps `run-app-openmpi.sh` and runs an application with different socket counts (and is thus topology-aware).
 The total number of MPI ranks in each execution is equal to the total number of available CPUs for the requested socket count.
 The same `-p`, `-w`, and `-s` parameters and behavior apply as with `characterize-sockets-multiapp-numactl.sh`.
-For example, to characterize socket counts 1, 2, 3, and 4:
+For example, to characterize socket counts 1 and 4:
 
-    ./characterize-sockets-app-openmpi.sh -a apps/npb-mpi-ep.D.x.sh -p -w $(for s in {1..4}; do printf " -s %d " $s; done)
+    ./characterize-sockets-app-openmpi.sh -a apps/npb-mpi-ep.D.x.sh -p -w -s 1 -s 4
 
 Log files are stored in directories of the form `sockets_N` where `N` is the socket count.
 
@@ -124,8 +123,8 @@ To instead place each rank on its own socket:
 
 Characterize MPI + threading for different socket counts using the script `characterize-sockets-app-openmpi.sh` with the `-t` option.
 The total number of MPI ranks in each execution is equal to the requested socket count, and the total number of threads for each MPI rank is equal to the available CPUs per socket.
-For example, to characterize socket counts 1, 2, 3, and 4:
+For example, to characterize socket counts 1 and 4:
 
-    ./characterize-sockets-app-openmpi.sh -a apps/npb-mz-mpi-bt.D.x.sh -t -p -w $(for s in {1..4}; do printf " -s %d " $s; done)
+    ./characterize-sockets-app-openmpi.sh -a apps/npb-mz-mpi-bt.D.x.sh -t -p -w -s 1 -s 4
 
 Log files are stored in directories as described previously for MPI.
