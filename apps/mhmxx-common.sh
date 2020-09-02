@@ -1,5 +1,6 @@
 #!/bin/bash
 export APP_NAME="mhmxx-common"
+# git revision cfc7b82
 export APP_CMD=(mhmxx.py --checkpoint=off --force-bloom=on)
 
 # Must set this before app_pre is called
