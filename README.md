@@ -7,6 +7,7 @@ Contents:
 
 * `apps/` - directory containing application launch configurations
 * `interceptors/` - directory containing interceptor configurations
+* `util/` - directory containing utility scripts
 * `env-reference.sh` - reference script for setting up the environment to locate apps
 * `topology.sh` - utility script for parsing system topology
 * `run-app-numactl.sh` - run an application using `numactl` and capture output
@@ -15,6 +16,7 @@ Contents:
 * `run-app-openmpi.sh` - run an application using OpenMPI and capture output
 * `run-app-openmpi-omp.sh` - thin wrapper around `run-app-openmpi.sh` to map ranks by socket (OpenMP can be used within a socket)
 * `characterize-sockets-app-openmpi.sh` - run MPI applications by mapping to different socket counts
+* `characterize-rapl.sh` - run commands under different RAPL power caps (zone: package, constraint: short term)
 
 
 Prerequisites
@@ -23,6 +25,7 @@ Prerequisites
 * numactl
 * util-linux
 * OpenMPI 4.x - https://www.open-mpi.org/
+* RAPLCap v0.5.0 - https://github.com/powercap/raplcap
 
 
 Applications
