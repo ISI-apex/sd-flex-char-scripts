@@ -37,6 +37,8 @@ Applications
 * [HPGMG](https://bitbucket.org/hpgmg/hpgmg) version 0.4
 * [RSBench](https://github.com/ANL-CESAR/RSBench) version 12
 * [XSBench](https://github.com/ANL-CESAR/XSBench) version 19
+* [MEGAHIT](https://github.com/voutcn/megahit) version 1.2.9
+* [MetaHipMerXX](https://bitbucket.org/berkeleylab/mhmxx) (private) git revision cfc7b82
 
 Applications have at least one script in the `apps` directory which the top-level scripts require to run the application.
 At a minimum, an app script requires specifying a user-friendly application name (`APP_NAME=foo`) and the application execution command (`APP_CMD=(foo [params]...)`).
